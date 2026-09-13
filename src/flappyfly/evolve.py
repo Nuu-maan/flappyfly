@@ -41,6 +41,8 @@ class Population:
         self.normalized = MODEL.exists()
         self.game = Flappy(seed, n_birds)
         self.genomes = [self.mutate((self.base.w, self.base.b)) for _ in range(n_birds)]
+        self.origin = ["seed"] * n_birds
+        self.last_deaths = []
         self.elites = [((self.base.w, self.base.b), 0)]
         self.best_ever, self.deaths, self.history, self.refits = 0, 0, [], 0
         self.X, self.y = [], []
@@ -72,9 +74,9 @@ class Population:
                 self.X.append(f)
                 self.y.append(flap_margin(self.game.state(i)))
         alive = self.game.step(flaps)
-        for i, ok in enumerate(alive):
-            if not ok:
-                self.on_death(i)
+        self.last_deaths = [(i, self.game.birds[i].y) for i, ok in enumerate(alive) if not ok]
+        for i, _ in self.last_deaths:
+            self.on_death(i)
         if len(self.X) > BUFFER:
             del self.X[: len(self.X) - BUFFER], self.y[: len(self.y) - BUFFER]
         if self.game.frames % REFIT_EVERY == 0 and self.fit_thread is None:
@@ -98,9 +100,9 @@ class Population:
         self.best_ever = max(self.best_ever, fitness)
         self.elites = sorted(self.elites + [(self.genomes[i], fitness)], key=lambda e: -e[1])[:ELITES]
         if self.refits and self.rng.random() < FROM_RIDGE:
-            self.genomes[i] = self.mutate((self.base.w, self.base.b))
+            self.genomes[i], self.origin[i] = self.mutate((self.base.w, self.base.b)), "ridge"
         else:
-            self.genomes[i] = self.mutate(self.elites[self.rng.integers(len(self.elites))][0])
+            self.genomes[i], self.origin[i] = self.mutate(self.elites[self.rng.integers(len(self.elites))][0]), "elite"
         self.game.spawn(i)
 
     @property
