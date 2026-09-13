@@ -1,11 +1,26 @@
 import pygame
 
-from .game import Flappy
-from .gui import ACCENT, DIM, FPS, INK, PANEL_X, TEXT, WIN_H, WIN_W, GameView, Panel
+from .game import BIRD_X, H, Flappy
+from .gui import ACCENT, DIM, FPS, GAME_W, INK, PANEL_X, TEXT, WARN, WIN_H, WIN_W, GameView, Panel, bird_color
 from .readout import MODEL, Readout
 from .sim import LIF
 from .train import frame
 from .vision import setup
+
+GAME_OVER_FRAMES = 60
+
+
+def banner(screen, panel, score):
+    box = pygame.Rect(0, 0, 260, 120)
+    box.center = (GAME_W // 2, WIN_H // 2)
+    shade = pygame.Surface(box.size, pygame.SRCALPHA)
+    shade.fill((14, 15, 22, 220))
+    screen.blit(shade, box.topleft)
+    pygame.draw.rect(screen, WARN, box, 2, border_radius=8)
+    for dy, text, font, color in ((22, "GAME OVER", panel.big, WARN), (58, f"score {score}", panel.font, TEXT),
+                                  (90, "restarting...  space to skip", panel.small, DIM)):
+        label = font.render(text, True, color)
+        screen.blit(label, (box.centerx - label.get_width() // 2, box.y + dy))
 
 
 def showcase():
@@ -25,20 +40,32 @@ def showcase():
     view, panel = GameView(), Panel(brain, readout.feat_idx)
     clock = pygame.time.Clock()
     runs, best_score, scores = 1, 0, []
+    game_over, counts = 0, sim.run(0)
     while True:
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT or (ev.type == pygame.KEYDOWN and ev.key == pygame.K_q):
                 return
-        counts = frame(sim, retina, game)
+            if ev.type == pygame.KEYDOWN and ev.key == pygame.K_SPACE and game_over:
+                game_over = 1
         deaths = []
-        if not game.step(readout.act(sim, counts)):
-            deaths = [(0, game.bird.y)]
-            scores.append(game.bird.score)
-            best_score = max(best_score, game.bird.score)
-            runs += 1
-            game.reset()
+        if game_over:
+            game_over -= 1
+            if game_over == 0:
+                runs += 1
+                game.reset()
+        else:
+            counts = frame(sim, retina, game)
+            if not game.step(readout.act(sim, counts)):
+                deaths = [(0, game.bird.y)]
+                scores.append(game.bird.score)
+                best_score = max(best_score, game.bird.score)
+                game_over = GAME_OVER_FRAMES
         screen.fill(INK)
         view.draw(screen, game, deaths)
+        if game_over:
+            view.bird(view.canvas, BIRD_X, int(min(H - 20, game.bird.y)), 0, bird_color(0), False)
+            screen.blit(pygame.transform.smoothscale(view.canvas, (GAME_W, WIN_H)), (0, 0))
+            banner(screen, panel, game.bird.score)
         x, w = PANEL_X, WIN_W - PANEL_X - 12
         panel.header(screen, x, game.frames, clock.get_fps())
         panel.tiles(screen, x, w, [
