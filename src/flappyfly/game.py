@@ -2,7 +2,7 @@ import numpy as np
 
 W, H = 288, 512
 BIRD_X, BIRD_R = 60, 12
-GRAVITY, FLAP, MAX_VY = 0.6, -7.0, 10.0
+GRAVITY, FLAP, MAX_VY = 1.0, -7.0, 10.0
 PIPE_W, GAP, PIPE_DX, SPEED, MAX_GAP_JUMP = 52, 120, 200, 3, 150
 
 
@@ -55,11 +55,17 @@ class Flappy:
             x0, x1 = max(0, int(px * sx)), min(n, int((px + PIPE_W) * sx) + 1)
             img[: int((gy - GAP / 2) * sy), x0:x1] = 0.5
             img[int((gy + GAP / 2) * sy):, x0:x1] = 0.5
-        img[min(n - 1, int(self.y * sy)), int(BIRD_X * sx)] = 1.0
+        r0, r1 = int((self.y - BIRD_R) * sy), int((self.y + BIRD_R) * sy) + 1
+        c0, c1 = int((BIRD_X - BIRD_R) * sx), int((BIRD_X + BIRD_R) * sx) + 1
+        img[max(0, r0):r1, c0:c1] = 1.0
         return img
 
 
-def bot(state):
+def flap_margin(state):
     y, vy, _, gy = state
-    return y + vy > gy + 20
+    return y + vy - (gy + 12)
+
+
+def bot(state):
+    return flap_margin(state) > 0
 
