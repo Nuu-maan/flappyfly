@@ -32,11 +32,12 @@ def draw_panel(surf, pop, font, small, raster):
         f"deaths        {pop.deaths}",
         f"best ever     {pop.best_ever} frames",
         f"elite         {pop.elites[0][1]} frames",
+        f"ridge refits  {pop.refits}" + ("  (fitting...)" if pop.fitting else ""),
     ]
     for k, line in enumerate(lines):
         surf.blit(font.render(line, True, TEXT), (16, 16 + 28 * k))
     for i, b in enumerate(pop.game.birds):
-        y = 170 + 20 * i
+        y = 198 + 20 * i
         pygame.draw.circle(surf, bird_color(i), (24, y + 8), 7)
         label = f"{b.frames:5d} frames  score {b.score}" if b.alive else "dead"
         surf.blit(small.render(label, True, TEXT if b.alive else DIM), (40, y))

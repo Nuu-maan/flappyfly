@@ -29,8 +29,9 @@ class Readout:
     def act(self, sim, counts):
         return bool(self.predict(self.features(sim, counts)))
 
-    def fit(self, X, t, l2=L2):
-        self.mean, self.std = X.mean(axis=0), X.std(axis=0) + 1e-3
+    def fit(self, X, t, l2=L2, mean=None, std=None):
+        self.mean = X.mean(axis=0) if mean is None else mean
+        self.std = X.std(axis=0) + 1e-3 if std is None else std
         Z = (X - self.mean) / self.std
         A = Z.T @ Z + l2 * np.eye(Z.shape[1], dtype=np.float32)
         self.w = np.linalg.solve(A, Z.T @ (t - t.mean())).astype(np.float32)
