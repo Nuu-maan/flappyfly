@@ -8,11 +8,14 @@ REFRACTORY = 2.2
 TAU_SYN = 5.0
 DELAY = 2
 TAU_ADAPT = 100.0
+# ponytail: at gain 1.0 the visual drive tips KC/optic-lobe loops into self-sustained firing;
+# 0.8 keeps the network input-driven. Replace with APL/homeostatic inhibition if the central brain matters.
+GAIN = 0.8
 
 
 class LIF:
-    def __init__(self, W, adapt=0.0, noise_std=0.0, seed=0):
-        self.W = W
+    def __init__(self, W, gain=GAIN, adapt=0.0, noise_std=0.0, seed=0):
+        self.W = W * gain
         self.adapt = np.float32(adapt)
         self.i_adapt = np.zeros(W.shape[0], dtype=np.float32)
         self.n = W.shape[0]
