@@ -3,28 +3,31 @@ from pathlib import Path
 import numpy as np
 
 MODEL = Path("data/readout.npz")
-TRACE_DECAY = 0.7
 L2 = 3000.0
 
 
 class Readout:
     def __init__(self, feat_idx, w=None, b=0.0, mean=None, std=None):
         self.feat_idx = feat_idx
-        self.w = np.zeros(len(feat_idx), dtype=np.float32) if w is None else w
+        d = 2 * len(feat_idx)
+        self.w = np.zeros(d, dtype=np.float32) if w is None else w
         self.b = b
-        self.mean = np.zeros(len(feat_idx), dtype=np.float32) if mean is None else mean
-        self.std = np.ones(len(feat_idx), dtype=np.float32) if std is None else std
-        self.trace = np.zeros(len(feat_idx), dtype=np.float32)
+        self.mean = np.zeros(d, dtype=np.float32) if mean is None else mean
+        self.std = np.ones(d, dtype=np.float32) if std is None else std
 
-    def observe(self, counts):
-        self.trace = self.trace * TRACE_DECAY + counts[self.feat_idx]
-        return self.trace.copy()
+    def features(self, sim, counts):
+        return np.concatenate([sim.v[self.feat_idx], counts[self.feat_idx]]).astype(np.float32)
+
+    def score(self, X, w=None, b=None):
+        w = self.w if w is None else w
+        b = self.b if b is None else b
+        return (X - self.mean) / self.std @ w + b
 
     def predict(self, X):
-        return (X - self.mean) / self.std @ self.w + self.b > 0
+        return self.score(X) > 0
 
-    def act(self, counts):
-        return bool(self.predict(self.observe(counts)))
+    def act(self, sim, counts):
+        return bool(self.predict(self.features(sim, counts)))
 
     def fit(self, X, t, l2=L2):
         self.mean, self.std = X.mean(axis=0), X.std(axis=0) + 1e-3
