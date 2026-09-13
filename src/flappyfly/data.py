@@ -17,7 +17,7 @@ CACHE = DATA_DIR / "brain.npz"
 
 MIN_WEIGHT = 3
 MV_PER_SYNAPSE = 0.275
-INHIBITORY = {"gaba", "glutamate"}
+INHIBITORY = {"gaba", "glutamate", "histamine"}
 
 
 def fetch(name):
