@@ -34,6 +34,18 @@ class Brain:
             mask &= self.side == side
         return np.flatnonzero(mask)
 
+    def reachable(self, idx, hops):
+        A = (self.W != 0).astype(np.float32).T.tocsr()
+        reach = np.zeros(self.n, dtype=bool)
+        reach[idx] = True
+        for _ in range(hops):
+            reach |= (A @ reach.astype(np.float32)) > 0
+        return np.flatnonzero(reach)
+
+    def subgraph(self, idx):
+        fields = {k: getattr(self, k)[idx] for k in ("bodyId", "type", "superclass", "side", "hex", "soma", "nt", "sign")}
+        return Brain(**fields, W=self.W[idx][:, idx].tocsr())
+
 
 def load():
     if not CACHE.exists():
