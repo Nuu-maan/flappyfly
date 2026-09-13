@@ -9,8 +9,9 @@ The brain is never trained. 164,506 typed neurons and 10.3M synaptic connections
 ```
 uv sync
 uv run flappyfly build   # downloads ~1.2 GB of connectome tables, caches data/brain.npz
-uv run flappyfly play    # the evolution window (trains from scratch, saves the best readout on quit)
-uv run flappyfly train   # headless imitation fit, with a random-reservoir control
+uv run flappyfly play      # the evolution window: 8 flies train from scratch, best genome autosaved
+uv run flappyfly showcase  # one fly running the best genome trained so far, restarting on death
+uv run flappyfly train     # headless imitation fit, with a random-reservoir control
 ```
 
 ## How training works
@@ -32,6 +33,7 @@ src/flappyfly/
   train.py    feature selection, imitation data collection, evaluation, random control
   evolve.py   population: one brain process per bird, elites, mutation, DAgger refits
   gui.py      pygame dashboard
+  showcase.py single fly on the best saved genome
   cli.py      entry point
 tests/        pytest (game rules, population, sim silence/response, pruning, readout)
 ```

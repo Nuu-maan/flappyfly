@@ -43,7 +43,7 @@ class Population:
         self.genomes = [self.mutate((self.base.w, self.base.b)) for _ in range(n_birds)]
         self.origin = ["seed"] * n_birds
         self.last_deaths = []
-        self.elites = [((self.base.w, self.base.b), 0)]
+        self.elites = [((self.base.w, self.base.b), self.base.fitness)]
         self.best_ever, self.deaths, self.history, self.refits = 0, 0, [], 0
         self.X, self.y = [], []
         self.fit_thread = None
@@ -99,6 +99,8 @@ class Population:
         self.history.append(fitness)
         self.best_ever = max(self.best_ever, fitness)
         self.elites = sorted(self.elites + [(self.genomes[i], fitness)], key=lambda e: -e[1])[:ELITES]
+        if fitness == self.best_ever:
+            self.save_best()
         if self.refits and self.rng.random() < FROM_RIDGE:
             self.genomes[i], self.origin[i] = self.mutate((self.base.w, self.base.b)), "ridge"
         else:
@@ -110,8 +112,10 @@ class Population:
         return self.fit_thread is not None
 
     def save_best(self, path=MODEL):
-        (w, b), _ = self.elites[0]
-        Readout(self.base.feat_idx, w, b, self.base.mean, self.base.std).save(path)
+        """Keeps the best genome across runs: only overwrites a saved model with a lower fitness."""
+        (w, b), fitness = self.elites[0]
+        if fitness >= Readout.saved_fitness(path):
+            Readout(self.base.feat_idx, w, b, self.base.mean, self.base.std, fitness).save(path)
 
     def close(self):
         for conn in self.conns:

@@ -10,6 +10,7 @@ def main():
     t.add_argument("--no-control", action="store_true", help="skip the random-reservoir control")
     e = sub.add_parser("play", help="watch a population of fly brains evolve on the game")
     e.add_argument("--birds", type=int, default=None)
+    sub.add_parser("showcase", help="watch the best fly trained so far, one bird, restarting on death")
     args = p.parse_args()
 
     if args.cmd == "build":
@@ -22,3 +23,6 @@ def main():
     elif args.cmd == "play":
         from .gui import play
         play(args.birds)
+    elif args.cmd == "showcase":
+        from .showcase import showcase
+        showcase()

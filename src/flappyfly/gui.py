@@ -86,21 +86,22 @@ class GameView:
 
 
 class Panel:
-    def __init__(self, pop):
+    def __init__(self, brain, feat_idx, pop=None):
         self.pop = pop
+        self.brain, self.feat_idx = brain, feat_idx
         self.big = pygame.font.Font(None, 30)
         self.font = pygame.font.Font(None, 22)
         self.small = pygame.font.Font(None, 17)
         self.t0 = time.time()
-        feat = pop.base.feat_idx
+        feat = feat_idx
         self.eyes = []
         for eye in ("L", "R"):
-            sel = np.flatnonzero((pop.brain.side[feat] == eye) & np.isfinite(pop.brain.hex[feat]).all(axis=1))
-            hx = pop.brain.hex[feat[sel]]
+            sel = np.flatnonzero((brain.side[feat] == eye) & np.isfinite(brain.hex[feat]).all(axis=1))
+            hx = brain.hex[feat[sel]]
             xy = np.stack([hx[:, 0] - hx[:, 1] / 2, hx[:, 1] * 0.866], axis=1)
             xy = (xy - xy.min(axis=0)) / (xy.max(axis=0) - xy.min(axis=0) + 1e-6)
             self.eyes.append((sel, xy))
-        types = pop.brain.type[feat]
+        types = brain.type[feat]
         self.raster_idx = np.concatenate([np.flatnonzero(types == t)[:24] for t in np.unique(types)])
         self.raster_types = types[self.raster_idx]
         self.raster = pygame.Surface((0, 0))
@@ -179,7 +180,7 @@ class Panel:
                 self.text(surf, "respawning", (rect.x + 34, y + 3), self.small, WARN)
 
     def spikes(self, surf, rect, counts):
-        self.card(surf, rect, f"spikes · best living fly · {int(counts.sum())} / frame")
+        self.card(surf, rect, f"spikes · {int(counts.sum())} / frame")
         r = pygame.Rect(rect.x + 70, rect.y + 28, rect.w - 82, rect.h - 40)
         if self.raster.get_size() != (r.w, r.h):
             self.raster = pygame.Surface((r.w, r.h))
@@ -200,28 +201,34 @@ class Panel:
                 self.text(surf, types[s], (rect.x + 10, y), self.small, DIM)
                 last_y = y
 
-    def draw(self, surf, counts, img, fps):
-        pop = self.pop
-        x, w = PANEL_X, WIN_W - PANEL_X - 12
+    def header(self, surf, x, frames, fps):
         self.text(surf, "flappyfly", (x, 12), self.big, ACCENT)
-        self.text(surf, f"male Drosophila CNS connectome  ·  {pop.brain.n:,} neurons simulated  ·  {pop.brain.W.nnz:,} synapses", (x + 118, 18), self.small, DIM)
+        self.text(surf, f"male Drosophila CNS connectome  ·  {self.brain.n:,} neurons simulated  ·  {self.brain.W.nnz:,} synapses", (x + 118, 18), self.small, DIM)
         elapsed = int(time.time() - self.t0)
-        self.text(surf, f"{elapsed // 60:02d}:{elapsed % 60:02d}   frame {pop.game.frames}   {fps:4.1f} fps", (x, 40), self.small, DIM)
+        self.text(surf, f"{elapsed // 60:02d}:{elapsed % 60:02d}   frame {frames}   {fps:4.1f} fps", (x, 40), self.small, DIM)
 
-        tiles = [("alive", f"{sum(b.alive for b in pop.game.birds)}/{len(pop.game.birds)}", TEXT),
-                 ("best ever", f"{pop.best_ever}", ACCENT),
-                 ("elite", f"{pop.elites[0][1]}", TEXT),
-                 ("deaths", f"{pop.deaths}", TEXT),
-                 ("ridge refits", f"{pop.refits}" + (" ⟳" if pop.fitting else ""), WARN if pop.fitting else TEXT)]
+    def tiles(self, surf, x, w, tiles):
         tw = (w - 8 * (len(tiles) - 1)) // len(tiles)
         for k, (label, value, color) in enumerate(tiles):
             self.tile(surf, pygame.Rect(x + k * (tw + 8), 62, tw, 58), label, value, color)
 
+    def senses(self, surf, x, w, counts, img):
         row_y, row_h = 132, 220
         third = (w - 16) // 3
         self.eye(surf, pygame.Rect(x, row_y, third, row_h), 0, counts, "left eye · lamina activity")
         self.retina(surf, pygame.Rect(x + third + 8, row_y, third, row_h), img)
         self.eye(surf, pygame.Rect(x + 2 * (third + 8), row_y, third, row_h), 1, counts, "right eye · lamina activity")
+
+    def draw(self, surf, counts, img, fps):
+        pop = self.pop
+        x, w = PANEL_X, WIN_W - PANEL_X - 12
+        self.header(surf, x, pop.game.frames, fps)
+        self.tiles(surf, x, w, [("alive", f"{sum(b.alive for b in pop.game.birds)}/{len(pop.game.birds)}", TEXT),
+                 ("best ever", f"{pop.best_ever}", ACCENT),
+                 ("elite", f"{pop.elites[0][1]}", TEXT),
+                 ("deaths", f"{pop.deaths}", TEXT),
+                 ("ridge refits", f"{pop.refits}" + (" ⟳" if pop.fitting else ""), WARN if pop.fitting else TEXT)])
+        self.senses(surf, x, w, counts, img)
 
         row_y, row_h = 364, 150
         half = (w - 8) // 2
@@ -241,7 +248,7 @@ def play(n_birds=None):
     pygame.display.flip()
 
     pop = Population(**({} if n_birds is None else {"n_birds": n_birds}))
-    view, panel = GameView(), Panel(pop)
+    view, panel = GameView(), Panel(pop.brain, pop.base.feat_idx, pop)
     clock = pygame.time.Clock()
     try:
         while True:
