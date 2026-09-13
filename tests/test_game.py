@@ -3,7 +3,7 @@ from flappyfly.game import Flappy, bot
 
 def test_bot_survives():
     g = Flappy()
-    for _ in range(3000):
+    for _ in range(5000):
         _, alive = g.step(bot(g.state()))
         assert alive, f"bot died at frame {g.frames}"
     assert g.score > 50

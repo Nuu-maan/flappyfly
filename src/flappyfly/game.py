@@ -2,8 +2,8 @@ import numpy as np
 
 W, H = 288, 512
 BIRD_X, BIRD_R = 60, 12
-GRAVITY, FLAP, MAX_VY = 0.6, -8.0, 10.0
-PIPE_W, GAP, PIPE_DX, SPEED = 52, 120, 160, 3
+GRAVITY, FLAP, MAX_VY = 0.6, -7.0, 10.0
+PIPE_W, GAP, PIPE_DX, SPEED, MAX_GAP_JUMP = 52, 120, 200, 3, 150
 
 
 class Flappy:
@@ -13,12 +13,15 @@ class Flappy:
 
     def reset(self):
         self.y, self.vy = H / 2, 0.0
-        self.pipes = [[W + i * PIPE_DX, self._gap_y()] for i in range(3)]
+        self.pipes = [[W, H / 2]]
+        for i in range(2):
+            self.pipes.append([W + (i + 1) * PIPE_DX, self._gap_y()])
         self.score, self.frames, self.alive = 0, 0, True
         return self.state()
 
     def _gap_y(self):
-        return float(self.rng.uniform(GAP, H - GAP))
+        prev = self.pipes[-1][1]
+        return float(np.clip(prev + self.rng.uniform(-MAX_GAP_JUMP, MAX_GAP_JUMP), GAP, H - GAP))
 
     def next_pipe(self):
         return min((p for p in self.pipes if p[0] + PIPE_W > BIRD_X - BIRD_R), key=lambda p: p[0])
@@ -58,5 +61,5 @@ class Flappy:
 
 def bot(state):
     y, vy, _, gy = state
-    return y + vy * 3 > gy
+    return y + vy > gy + 20
 
